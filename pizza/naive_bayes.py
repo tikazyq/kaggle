@@ -2,8 +2,6 @@ import re
 import nltk
 import numpy as np
 
-TRAIN_DIR = 'CSDMC2010_SPAM/CSDMC2010_SPAM/train_ext/'
-
 
 def tokenize(text):
     tokens = re.split(r'\W*', text.lower())
