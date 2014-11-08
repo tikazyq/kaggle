@@ -71,21 +71,21 @@ class NaiveBayesTextClassifier(NaiveBayesClassifier):
     def __init__(self, text_list=None):
         super(NaiveBayesTextClassifier, self).__init__()
         self.text_list = None if text_list is None else text_list
-        self.volcab_list = None
+        self.vocab_list = None
 
     def vectorize_text(self, text):
-        volcab_list = self.volcab_list
-        vec = np.zeros(len(volcab_list))
+        vocab_list = self.vocab_list
+        vec = np.zeros(len(vocab_list))
         words = text if type(text) == list else tokenize(text)
         for w in words:
-            if w in volcab_list:
-                vec[volcab_list.index(w)] += 1
+            if w in vocab_list:
+                vec[vocab_list.index(w)] += 1
         return vec
 
     def vectorize_texts(self, text_list=list(), ignore_top_threshold=0, top_word_threshold=None):
         """
         convert a list of documents / texts into text matrix.
-        return (text_matrix, volcab_list)
+        return (text_matrix, vocab_list)
         :param text_list:
         :param ignore_top_threshold:
         :param top_word_threshold:
@@ -100,15 +100,15 @@ class NaiveBayesTextClassifier(NaiveBayesClassifier):
                     word_counts[w] = 0
                 word_counts[w] += 1
             words_list.append(words)
-        # volcab list / all words set
-        volcab_list = sorted([(w, word_counts[w]) for w in word_counts], key=(lambda x: x[1]), reverse=True)
+        # vocab list / all words set
+        vocab_list = sorted([(w, word_counts[w]) for w in word_counts], key=(lambda x: x[1]), reverse=True)
         if ignore_top_threshold:
-            volcab_list = volcab_list[ignore_top_threshold:]
+            vocab_list = vocab_list[ignore_top_threshold:]
         if top_word_threshold:
-            volcab_list = volcab_list[:top_word_threshold]
-        volcab_list = [x[0] for x in volcab_list]
+            vocab_list = vocab_list[:top_word_threshold]
+        vocab_list = [x[0] for x in vocab_list]
         self.text_list = text_list
-        self.volcab_list = volcab_list
+        self.vocab_list = vocab_list
         # text matrix
         matrix = []
         for i, words in enumerate(words_list):
