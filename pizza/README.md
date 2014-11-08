@@ -13,3 +13,17 @@ rbroberg提供了一个简单的解法（用Julia写的）：https://github.com/
 * 根据prob_dict算出每个document对应的收到pizza的平均probability
 * 计算training data所有documents平均probability分布（如下图），发现很cutoff很明显在0.3（也就是说，当document的probability大于0.3时，能收到pizza）
 * 将cutoff>0.3到test data上，得到其预测值
+
+Update - 7th Nov 2014
+---
+solution_nb.py is inspired by the Spam Filter classifier in 4th Chapter in *Machine Learning in Action*, using Naive Bayes. 
+This improved the performance compared with previous solution from rbroberg (0.5.
+And this classifier, namely *NaiveBayesTextClassifier*, doesn't need to manually assign a hard-coded cutoff.
+
+Steps
+
+    compute vocabulary list from train data text list
+    vectorize train data into text vectors
+    compute class probabilities P(ci) and conditional matrix P(wj|ci) from train data text vectors
+    get class scores using P(ci) and P(wj|ci) and test data text vectors
+    classify by choosing the one with the largest test scored
