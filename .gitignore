@@ -5,3 +5,5 @@
 *.zip
 *.Bmp
 *.png
+*.Rhistory
+*.gz

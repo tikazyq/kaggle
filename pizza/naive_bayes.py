@@ -18,6 +18,10 @@ class NaiveBayesClassifier(object):
         p(W|ci) = p(w0,w1,...wN|ci) = p(w0|ci) * p(w1|ci) * ... * p(wN|ci)
         p(ci) = number of documents for class i / total number of documents
         p(W) = p(w0,w1,...wN) = 1
+
+    for text classification
+        p(wj|ci) = probability of word wj occurring in class ci
+                 = word count of wj for class ci / total word count for class ci
     """
 
     def __init__(self, train_matrix=None, class_labels=None, method='log'):
@@ -59,12 +63,12 @@ class NaiveBayesClassifier(object):
     def calculate(self, vec):
         return (self.Pcw_matrix * vec).sum(1) + np.log(self.Pc_vec)
 
-    def _classify(self, vec):
+    def _predict(self, vec):
         res = list(self.calculate(vec))
         return self.class_labels[res.index(max(res))]
 
-    def classify(self, vec):
-        return self._classify(vec)
+    def predict(self, vec):
+        return self._predict(vec)
 
 
 class NaiveBayesTextClassifier(NaiveBayesClassifier):
@@ -120,9 +124,24 @@ class NaiveBayesTextClassifier(NaiveBayesClassifier):
                                             top_word_threshold=None)
         self._train(train_matrix, train_labels)
 
-    def classify(self, text):
+    def predict(self, text):
         vec = self.vectorize_text(text)
-        return self._classify(vec)
+        return self._predict(vec)
+
+
+class SklearnNaiveBayesTextClassifier(NaiveBayesTextClassifier):
+    def __init__(self):
+        super(SklearnNaiveBayesTextClassifier, self).__init__()
+        from sklearn.naive_bayes import GaussianNB
+
+        self.clf = GaussianNB()
+
+    def _train(self, train_matrix, train_labels):
+        train_matrix = train_matrix / train_matrix.sum(1)[np.newaxis].T
+        self.clf.fit(train_matrix, train_labels)
+
+    def _classify(self, vec):
+        return self.clf.predict(vec)
 
 
 def main():

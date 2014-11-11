@@ -17,7 +17,7 @@ rbroberg提供了一个简单的解法（用Julia写的）：https://github.com/
 Update - 7th Nov 2014
 ---
 solution_nb.py is inspired by the Spam Filter classifier in 4th Chapter in *Machine Learning in Action*, using Naive Bayes. 
-This improved the performance compared with previous solution from rbroberg (0.5.
+This improved the performance compared with previous solution from rbroberg (0.53).
 And this classifier, namely *NaiveBayesTextClassifier*, doesn't need to manually assign a hard-coded cutoff.
 
 Steps
