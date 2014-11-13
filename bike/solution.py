@@ -1,17 +1,9 @@
-# -*- coding: utf-8 -*-
-# <nbformat>3.0</nbformat>
 
-# <markdowncell>
-
-# Inspired by [an article from Brandon Harris link](http://brandonharris.io/kaggle-bike-sharing/) using **party**, an R package using conditional inference trees, which relies on calculation of covariates statistics. This seems making sense, because some variabels are correlated, like *season*, *temp*, *weather*.
-# 
 # Kaggle evaluation function: $$\sqrt{\frac{1}{n} \sum_{i=1}^n (\log(p_i + 1) - \log(a_i+1))^2 }$$
-
-# <markdowncell>
 
 # #### Prepare dataset
 
-# <codecell>
+# In[15]:
 
 from sklearn import linear_model as lm
 from sklearn import preprocessing as pp
@@ -21,7 +13,7 @@ import pandas as pd
 from numpy import *
 import numpy as np
 import matplotlib.pyplot as plt
-%matplotlib inline
+get_ipython().magic(u'matplotlib inline')
 plt.rcParams['figure.figsize'] = (10, 8)
 
 np.random.seed(1000)
@@ -40,9 +32,9 @@ num_vars = [
             'windspeed'
             ]
 out_vars = [
-            'casual',
+#             'casual',
 #             'registered',
-#             'count'
+            'count'
             ]
 
 # fit_vars = cat_vars + num_vars
@@ -55,13 +47,9 @@ def load_dataset(fname):
         d[var] = d[var].astype(str)
     d_cat = pd.get_dummies(d.ix[:,cat_vars])
     d = d.join(d_cat)
-    
-    cat_vars2 = d_cat.columns.tolist()
-    global fit_vars
-    fit_vars = cat_vars2 + num_vars
     return d
     
-def split_dataset(d, ratio=0.7):
+def split_dataset(d, ratio=0.9):
     d['randn'] = np.random.uniform(size=len(d))
     return (d[d['randn']<ratio].drop('randn',axis=1), 
             d[d['randn']>=ratio].drop('randn',axis=1))
@@ -78,75 +66,100 @@ train = load_dataset('train.csv')
 d_train, d_cal = split_dataset(train)
 test = load_dataset('test.csv')
 
-# <markdowncell>
 
-# #### Ridge Regression using sklearn
+# #### Decision Tree Regression with sklearn
 
-# <codecell>
+# In[16]:
 
-coeffs = []
-rmsles = []
-alphas = logspace(-2, 10, 100)
-min_rmsle_cal = 1e9
-min_rmsle_train = 1e9
-best_alpha = 1e9
-for alpha in alphas:
-    x = d_train.ix[:,fit_vars]
-    y = array(d_train.ix[:,out_vars])
-    clf = lm.Ridge(alpha)
-    clf.fit(x, y)
-    coeffs.append(clf.coef_[0])
-    
-    x_c = d_cal.ix[:,fit_vars]
-    y_c = array(d_cal.ix[:,out_vars])
-    y_cp = clf.predict(x_c)
-    y_cp = y_cp * (y_cp>=0)
-    y_p = clf.predict(x)
-    y_p = y_p * (y_p>=0)
-    current_rmsle_cal = rmsle(y_c, y_cp)
-    current_rmsle_train = rmsle(y, y_p)
-    rmsles.append(current_rmsle)
-    if current_rmsle_cal < min_rmsle_cal:
-        min_rmsle_cal = current_rmsle_cal
-        min_rmsle_train = current_rmsle_train
-        best_alpha = alpha
-    global test
-    y_t = test.ix[:,out_vars]
-#     DataFrame(hstack((y_t, y_c)))
-print "min rmsle (cal): %s" % min_rmsle_cal
-print "min rmsle (train): %s" % min_rmsle_train
-print "best alpha: %f" % alpha
-ax = plt.gca()
-plt.plot(alphas, array(coeffs))
-ax.set_xscale('log')
-plt.legend(fit_vars, 7)
-plt.plot(alphas, rmsles)
-plt.title('Ridge Regression (coeffs)')
-plt.show()
-
-# <markdowncell>
-
-# #### Single variable evaluation
-
-# <codecell>
+from sklearn.tree import DecisionTreeRegressor
+from sklearn.ensemble import RandomForestRegressor
+import warnings
+warnings.filterwarnings("ignore")
 
 fit_vars = cat_vars + num_vars
-coeffs = []
-for var in fit_vars:
-    clf = lm.LinearRegression()
-    y = train.ix[:,out_vars]
-    x = conv_cat_vars(train, var)
-    dt,dc = split_dataset(conv_cat_vars(train, var))
-    xt,yt = train.ix[dt.index,x.columns].fillna(0), train.ix[dt.index,out_vars].fillna(0)
-    xc,yc = train.ix[dc.index,x.columns].fillna(0), train.ix[dc.index,out_vars].fillna(0)
-    clf.fit(xt, yt)
-    yc_p = clf.predict(xc)
-    print "RMSLE for %s: %f" % (var, rmsle(yc_p, yc))
-    coeffs.append((var, clf.coef_, rmsle(yc_p, yc)))
-                  
-# hour is the most important feature
-var = 'hour'
-clf.coef_ = filter(lambda x: x[0]==var, coeffs)[0][1]
-x = array(conv_cat_vars(test, var))
-clf.predict(x)
+for var in cat_vars:
+    train[var] = train[var].astype('str')
+
+Xt, yt = d_train.ix[:,fit_vars], d_train.ix[:,out_vars]
+Xc, yc = d_cal.ix[:,fit_vars], d_cal.ix[:,out_vars]
+
+perf = []
+best_fi = []
+best_ec = Inf
+for msl in range(1,21,5):
+    for mss in range(2, 40,1):
+        # comment the below two lines out to choose regressor
+        clf = DecisionTreeRegressor(min_samples_split=mss,min_samples_leaf=msl,splitter='best')
+#         clf = RandomForestRegressor(n_estimators=10, min_samples_split=mss,min_samples_leaf=msl)
+    
+        clf.fit(Xt, yt)
+        yt_p = mat(clf.predict(Xt)).T
+        yc_p = mat(clf.predict(Xc)).T
+        
+        et = rmsle(array(yt),array(yt_p))
+        ec = rmsle(array(yc),array(yc_p))
+        
+        if ec < best_ec:
+            best_ec = ec
+            best_fi = clf.feature_importances_
+        perf.append((msl, mss, et, ec))
+
+perf = DataFrame(perf, columns=['msl','mss','et','ec'])
+print perf.sort('ec',ascending=1).head()
+
+ax1 = plt.subplot(211)
+ax1.set_title('training data rmsle')
+ax2 = plt.subplot(212)
+ax2.set_title('calibration data rmsle')
+perf.pivot('mss','msl', 'et').plot(ax=ax1)
+perf.pivot('mss','msl', 'ec').plot(ax=ax2)
+plt.tight_layout()
+plt.show()
+
+p = DataFrame(array([fit_vars, best_fi]).T,columns=['feature','importance']).sort('importance',ascending=0)
+print p
+
+
+# Out[16]:
+
+#         msl  mss        et        ec
+#     34    1   36  0.375149  0.448858
+#     33    1   35  0.373483  0.450221
+#     36    1   38  0.378482  0.450499
+#     35    1   37  0.376975  0.450678
+#     32    1   34  0.371426  0.451113
+# 
+
+# image file:
+
+#           feature  importance
+#     5        hour  0.67858956
+#     6        temp  0.26677283
+#     0      season  0.02342060
+#     4     weekday  0.01751396
+#     7       atemp  0.00406671
+#     3     weather  0.00339767
+#     2  workingday  0.00292615
+#     8    humidity  0.00218973
+#     9   windspeed  0.00061127
+#     1     holiday  0.00051148
+# 
+
+# In[17]:
+
+# DecisionTreeRegressor
+# Choose the optimised params (min_samples_leaf=6, min_samples_split=37)
+clf = DecisionTreeRegressor(min_samples_leaf=6, min_samples_split=37)
+clf.fit(train.ix[:,fit_vars],train.ix[:,out_vars])
+submit = test.ix[:,['datetime']]
+submit['count'] = clf.predict(test.ix[:,fit_vars])
+submit.to_csv('submit_sklearn_dc.csv',index=0)
+
+# RandomForesetRegressor
+# Choose the optimised params (min_samples_split=20)
+clf = RandomForestRegressor(n_estimators=10, min_samples_split=1,min_samples_leaf=20)
+clf.fit(train.ix[:,fit_vars],train.ix[:,out_vars])
+submit = test.ix[:,['datetime']]
+submit['count'] = clf.predict(test.ix[:,fit_vars])
+submit.to_csv('submit_sklearn_rf.csv',index=0)
 
