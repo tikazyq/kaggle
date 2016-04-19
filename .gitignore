@@ -6,4 +6,8 @@
 *.Bmp
 *.png
 *.Rhistory
+*.Rdata
 *.gz
+.Rproj.user
+&.Rproj
+.ipynb_checkpoints
